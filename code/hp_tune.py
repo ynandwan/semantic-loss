@@ -20,7 +20,7 @@ num_labeled = [100]
 batch_size = [10]
 std = [0.1, 0.2, 0.3, 0.4, 0.5]
 wt = [0.1, 0.01, 0.005, 0.001, 0.0005, 0.0001]
-lr = [1e-4]
+lr = [1e-5, 1e-3, 1e-4]
 
 
 all_params = [num_labeled,  batch_size, std, wt, lr]
@@ -40,8 +40,8 @@ count = 0
 for log_str, setting_str in jobs_list.items():
     count += 1
     full_cmd = '{} {}'.format(slurm_cmd, setting_str)
-    if count % 4 == 0:
+    if count % 2 == 0:
         bash_cmd = full_cmd 
     else:
-        bash_cmd = full_cmd + '&'
+        bash_cmd = full_cmd
     print(bash_cmd)
