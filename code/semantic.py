@@ -172,7 +172,7 @@ def main(_):
                 #Pdb().set_trace() 
                 logger.info('{},{},{:.4f},{},{},{}'.format(i,FLAGS_STR,round(test_accuracy,4),round(train_average_accuracy/100,4),round(train_average_loss/100,4),round(train_average_wmc/100,4)))
                 #with open("log.txt", 'a') as outFile:
-                print('test accuracy %g' % (test_accuracy))
+                #print('test accuracy %g' % (test_accuracy))
                 #    outFile.write('test accuracy %g\n' % (test_accuracy))
 
             if i % 100 == 0:
@@ -210,5 +210,8 @@ if __name__ == '__main__':
     logger.info('t,step,exp,tea,tra,trl,trw')
     handler.setFormatter(formatter)
 
-
-    tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+    print('Start: {}'.format(FLAGS_STR))
+    if not os.path.exists('../logs/'+FLAGS_STR+'.csv'):
+        tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+    
+    print('End: {}'.format(FLAGS_STR))
