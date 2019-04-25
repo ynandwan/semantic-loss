@@ -202,16 +202,17 @@ if __name__ == '__main__':
     FLAGS, unparsed = parser.parse_known_args()
     #print(yatin)
     FLAGS_STR = '_'.join([k.replace('_','.') +'-'+str(v) for k,v in FLAGS.__dict__.items()])
-    logger = logging.getLogger(FLAGS_STR)
-    logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s,%(message)s',datefmt='%Y%m%d %H:%M:%S')
-    handler = logging.FileHandler('../logs/'+FLAGS_STR+'.csv')
-    logger.addHandler(handler)
-    logger.info('t,step,exp,tea,tra,trl,trw')
-    handler.setFormatter(formatter)
-
     print('Start: {}'.format(FLAGS_STR))
-    if not os.path.exists('../logs/'+FLAGS_STR+'.csv'):
+    if os.path.exists('../logs/'+FLAGS_STR+'.csv'):
+        print('Alredy done. Exit')
+    else:
+        logger = logging.getLogger(FLAGS_STR)
+        logger.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s,%(message)s',datefmt='%Y%m%d %H:%M:%S')
+        handler = logging.FileHandler('../logs/'+FLAGS_STR+'.csv')
+        logger.addHandler(handler)
+        logger.info('t,step,exp,tea,tra,trl,trw')
+        handler.setFormatter(formatter)
         tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
-    
-    print('End: {}'.format(FLAGS_STR))
+        print('End: {}'.format(FLAGS_STR))
+
