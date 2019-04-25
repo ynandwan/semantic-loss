@@ -23,7 +23,7 @@ def semantic_loss(y_mlp):
     prob = F.sigmoid(y_mlp)
     wmc_tmp = torch.zeros_like(prob)
     for i in range(y_mlp.shape[1]):
-        one_situation = torch.ones_like(y_mlp).scatter_(1,torch.LongTensor(y_mlp.shape[0]).fill_(i).unsqueeze(-1),0)
+        one_situation = torch.ones_like(y_mlp).scatter_(1,torch.zeros_like(y_mlp[:,0]).fill_(i).unsqueeze(-1).long(),0)
         wmc_tmp[:,i] = torch.abs((one_situation - prob).prod(dim=1))
         #omp = 1.0 - prob
         #omp[:,i] = prob[:,i]
@@ -52,7 +52,7 @@ def per_image_normalize(images):
 
 def train_transform(images):
     with torch.no_grad():
-        images = torch.FloatTensor(images)
+        #images = torch.FloatTensor(images)
         mu,sig = per_image_normalize(images)
        
         #all of this is just to crop and pad with 0
@@ -69,7 +69,6 @@ def train_transform(images):
 
 
 def test_transform(images):
-    images = torch.FloatTensor(images)
     mu,sig = per_image_normalize(images)
     return ((images - mu.unsqueeze(-1))/sig.unsqueeze(-1))
     #return per_image_normalize(images)
@@ -88,10 +87,21 @@ def train(FLAGS, FLAGS_STR, logger):
     total, total_correct, total_labelled = 0,0,0
     total_sloss, total_uloss = 0.0, 0.0
     
+    if FLAGS.gpu:
+        dnn = dnn.cuda()
+
+
     for batch_num in range(50000):
         images, labels = mnist.train.next_batch(FLAGS.batch_size)
+        images = torch.FloatTensor(images)
+        labels = torch.Tensor(labels) 
+
         images = train_transform(images)
-        labels = torch.Tensor(labels)
+        if FLAGS.gpu:
+            images = images.cuda()
+            labels = labels.cuda()
+
+        #labels = torch.Tensor(labels)
         label_examples = labels.sum(dim=1)
         unlabel_examples = 1.0 - label_examples 
         
@@ -116,10 +126,13 @@ def train(FLAGS, FLAGS_STR, logger):
         if batch_num % 500 == 0:
             with torch.no_grad():
                 dnn.eval()
-                images = mnist.test.images
-                labels = mnist.test.labels
+                images = torch.FloatTensor(mnist.test.images)
+                labels = torch.Tensor(mnist.test.labels)
+                if FLAGS.gpu:
+                    images = images.cuda()
+                    labels = labels.cuda() 
                 images = test_transform(images)
-                y_ = torch.Tensor(labels)
+                y_ = labels 
                 y_mlp = dnn(images)
                 correct_prediction = (y_mlp.max(dim=1)[1] == y_.max(dim=1)[1]).sum().item()
                 #print('Step {} Test_Accuracy {}'.format(batch_num, correct_prediction/y_.shape[0]))
@@ -150,12 +163,15 @@ if __name__ == '__main__':
     parser.add_argument('--wt', type=float,help='semantic loss weight', default = 0.0005)
     parser.add_argument('--std', type=float,help='std dev of gaussian noise', default = 0.3)
     parser.add_argument('--lr', type=float,help='learning rate of adam', default = 0.0001)
+    parser.add_argument('--gpu', type=int,help='use gpu or not', default = 0)
      
     
     FLAGS, unparsed = parser.parse_known_args()
+    FLAGS.gpu = torch.cuda.is_available() and FLAGS.gpu
     #print(yatin)
     keys = list(FLAGS.__dict__.keys())
     keys.sort()
+    keys.remove('gpu')
     #Pdb().set_trace()
     FLAGS_STR = '_'.join([k.replace('_','.') +'-'+str(FLAGS.__dict__[k]) for k in keys])
     print('Start: {}'.format(FLAGS_STR))
