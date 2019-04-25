@@ -3,7 +3,8 @@
 from  __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
+import os
+import logging
 import torch
 import numpy as np 
 from mnist_input import read_data_sets
@@ -74,73 +75,101 @@ def test_transform(images):
     #return per_image_normalize(images)
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--data_path', type=str,
-                default='/home/yatin/phd/fashion-mnist/data/fashion',help='Directory for storing input data')
-parser.add_argument('--num_labeled', type=int,default = 100,
-                    help='Num of labeled examples provided for semi-supervised learning.')
-parser.add_argument('--batch_size', type=int,default = 10,
-             help='Batch size for mini-batch Adams gradient descent.')
-
-parser.add_argument('--lr', type=float,default = 0.002,help='lr for adam')
-parser.add_argument('--lamda', type=float,default = 0.0005,help='constant wt for semantic loss')
-
-FLAGS, unparsed = parser.parse_known_args()
-
-
-mnist = read_data_sets('/home/yatin/phd/fashion-mnist/data/fashion',100,one_hot = True)
-
-
-dnn = models.MNISTDNN() 
-#supervised_loss  = nn.CrossEntropyLoss(reduction='none')
-supervised_loss  = nn.BCEWithLogitsLoss(reduction='none')
-optimizer = torch.optim.Adam(dnn.parameters(), lr=FLAGS.lr)
-
-#reset accuracies after 100 batches
-#eval after every 500 batches
-
-total, total_correct, total_labelled = 0,0,0
-total_sloss, total_uloss = 0.0, 0.0
-
-for batch_num in range(50000):
-    images, labels = mnist.train.next_batch(FLAGS.batch_size)
-    #break
-    images = train_transform(images)
-    labels = torch.Tensor(labels)
-    label_examples = labels.sum(dim=1)
-    unlabel_examples = 1.0 - label_examples 
+def train(FLAGS, FLAGS_STR, logger):
+    mnist = read_data_sets(FLAGS.data_path, n_labeled=FLAGS.num_labeled, one_hot=True)
+    dnn = models.MNISTDNN() 
+    #supervised_loss  = nn.CrossEntropyLoss(reduction='none')
+    supervised_loss  = nn.BCEWithLogitsLoss(reduction='none')
+    optimizer = torch.optim.Adam(dnn.parameters(), lr=FLAGS.lr)
     
-    #y_ = labels.max(dim=1)[1]
-    y_ = labels
+    #reset accuracies after 100 batches
+    #eval after every 500 batches
     
-    y_mlp = dnn(images)
-    #break
+    total, total_correct, total_labelled = 0,0,0
+    total_sloss, total_uloss = 0.0, 0.0
+    
+    for batch_num in range(50000):
+        images, labels = mnist.train.next_batch(FLAGS.batch_size)
+        images = train_transform(images)
+        labels = torch.Tensor(labels)
+        label_examples = labels.sum(dim=1)
+        unlabel_examples = 1.0 - label_examples 
+        
+        y_ = labels
+        
+        y_mlp = dnn(images)
+    
+        sloss = supervised_loss(y_mlp,y_).sum(dim=1)
+        uloss = semantic_loss(y_mlp)
+        loss = (FLAGS.wt*uloss + sloss*label_examples).mean()
+        step(dnn,loss,optimizer)
+        
+        correct_prediction = label_examples*((y_mlp.max(dim=1)[1] == y_.max(dim=1)[1]).float())
+        total_correct += correct_prediction.sum().item()
+        total_labelled += label_examples.sum().item()
+        total_sloss += (sloss*label_examples).sum().item()
+        total_uloss += uloss.sum().item()
+        total += labels.shape[0]
+        
+    
+   
+        if batch_num % 500 == 0:
+            with torch.no_grad():
+                dnn.eval()
+                images = mnist.test.images
+                labels = mnist.test.labels
+                images = test_transform(images)
+                y_ = torch.Tensor(labels)
+                y_mlp = dnn(images)
+                correct_prediction = (y_mlp.max(dim=1)[1] == y_.max(dim=1)[1]).sum().item()
+                #print('Step {} Test_Accuracy {}'.format(batch_num, correct_prediction/y_.shape[0]))
+                 
+                logger.info('{},{},{:.4f},{},{},{}'.format(batch_num,FLAGS_STR,round(correct_prediction/y_.shape[0],4),round(total_correct/total_labelled,4),round(total_sloss/total_labelled,4),round(total_uloss/total,4)))
+            #
+            dnn.train()
+    
+        if batch_num % 10000 == 0:
+            print('{},{},{:.4f},{},{},{}'.format(batch_num,FLAGS_STR,round(correct_prediction/y_.shape[0],4),round(total_correct/total_labelled,4),round(total_sloss/total_labelled,4),round(total_uloss/total,4)))
 
-    sloss = supervised_loss(y_mlp,y_).sum(dim=1)
-    uloss = semantic_loss(y_mlp)
-    loss = (FLAGS.lamda*uloss + sloss*label_examples).mean()
-    step(dnn,loss,optimizer)
+        if batch_num % 100 == 0:
+            #print('step {}, train_accuracy {}, train_loss {}, uloss {}'.format(batch_num, total_correct/total_labelled, total_sloss / total_labelled, total_uloss /total))
+            total, total_correct, total_labelled = 0,0,0
+            total_sloss, total_uloss = 0.0, 0.0
+
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_path', type=str,
+                                            default='mnist_data',
+                                            help='Directory for storing input data')
+    parser.add_argument('--num_labeled', type=int,
+                                            help='Num of labeled examples provided for semi-supervised learning.',default = 100)
+    parser.add_argument('--batch_size', type=int,default=8,
+                                            help='Batch size for mini-batch Adams gradient descent.')
+    parser.add_argument('--wt', type=float,help='semantic loss weight', default = 0.0005)
+    parser.add_argument('--std', type=float,help='std dev of gaussian noise', default = 0.3)
+    parser.add_argument('--lr', type=float,help='learning rate of adam', default = 0.0001)
+     
     
-    correct_prediction = label_examples*((y_mlp.max(dim=1)[1] == y_.max(dim=1)[1]).float())
-    total_correct += correct_prediction.sum().item()
-    total_labelled += label_examples.sum().item()
-    total_sloss += (sloss*label_examples).sum().item()
-    total_uloss += uloss.sum().item()
-    total += labels.shape[0]
-    
-    if batch_num % 100 == 0:
-        print('step {}, train_accuracy {}, train_loss {}, uloss {}'.format(batch_num, total_correct/total_labelled, total_sloss / total_labelled, total_uloss /total))
-    
-    if batch_num % 500 == 0:
-        with torch.no_grad():
-            dnn.eval()
-            images = mnist.test.images
-            labels = mnist.test.labels
-            images = test_transform(images)
-            y_ = torch.Tensor(labels)
-            y_mlp = dnn(images)
-            correct_prediction = (y_mlp.max(dim=1)[1] == y_.max(dim=1)[1]).sum().item()
-            print('Step {} Test_Accuracy {}'.format(batch_num, correct_prediction/y_.shape[0]))
-        #
-        dnn.train()
+    FLAGS, unparsed = parser.parse_known_args()
+    #print(yatin)
+    keys = list(FLAGS.__dict__.keys())
+    keys.sort()
+    #Pdb().set_trace()
+    FLAGS_STR = '_'.join([k.replace('_','.') +'-'+str(FLAGS.__dict__[k]) for k in keys])
+    print('Start: {}'.format(FLAGS_STR))
+    if os.path.exists('../logs_torch/'+FLAGS_STR+'.csv'):
+        print('Alredy done. Exit')
+    else:
+        logger = logging.getLogger(FLAGS_STR)
+        logger.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s,%(message)s',datefmt='%Y%m%d %H:%M:%S')
+        handler = logging.FileHandler('../logs_torch/'+FLAGS_STR+'.csv')
+        logger.addHandler(handler)
+        logger.info('t,step,exp,tea,tra,trl,trw')
+        handler.setFormatter(formatter)
+        train(FLAGS,FLAGS_STR,logger)
+        #tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+        print('End: {}'.format(FLAGS_STR))
 

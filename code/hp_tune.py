@@ -14,10 +14,10 @@ parser.add_argument('-save_model',default=0,type=int)
 args = parser.parse_args(sys.argv[1:])
 
 
-slurm_cmd = '!python semantic-loss.py' 
+slurm_cmd = '!python semantic.py' 
 
 num_labeled = [100]
-batch_size = [10, 16, 32, 64, 128]
+batch_size = [10]
 std = [0.1, 0.2, 0.3, 0.4, 0.5]
 wt = [0.1, 0.01, 0.005, 0.001, 0.0005, 0.0001]
 lr = [1e-4]
