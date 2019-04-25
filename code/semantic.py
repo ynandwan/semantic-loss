@@ -15,7 +15,7 @@ from mnist_input import read_data_sets
 import tensorflow as tf
 import logging
 from IPython.core.debugger import Pdb
-
+import os
 
 FLAGS = None
 FLAGS_STR = ''
