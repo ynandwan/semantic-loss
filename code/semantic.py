@@ -14,14 +14,6 @@ import tensorflow as tf
 import logging
 from IPython.core.debugger import Pdb
 
-logger = logging.getLogger('stats.csv')
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s,%(message)s',datefmt='%Y%m%d %H:%M:%S')
-handler = logging.FileHandler('stats.csv')
-logger.addHandler(handler)
-logger.info('t,step,exp,tea,tra,trl,trw')
-handler.setFormatter(formatter)
-
 
 FLAGS = None
 FLAGS_STR = ''
@@ -159,7 +151,7 @@ def main(_):
     accuracy = tf.reduce_sum(correct_prediction) / tf.reduce_sum(label_examples)
 
     graph_location = tempfile.mkdtemp()
-    print('Saving graph to: %s' % graph_location)
+    #print('Saving graph to: %s' % graph_location)
     train_writer = tf.summary.FileWriter(graph_location)
     train_writer.add_graph(tf.get_default_graph())
 
@@ -177,18 +169,18 @@ def main(_):
                             x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})
                 #Pdb().set_trace() 
                 logger.info('{},{},{:.4f},{},{},{}'.format(i,FLAGS_STR,round(test_accuracy,4),round(train_average_accuracy/100,4),round(train_average_loss/100,4),round(train_average_wmc/100,4)))
-                with open("log.txt", 'a') as outFile:
-                    print('test accuracy %g' % (test_accuracy))
-                    outFile.write('test accuracy %g\n' % (test_accuracy))
+                #with open("log.txt", 'a') as outFile:
+                print('test accuracy %g' % (test_accuracy))
+                #    outFile.write('test accuracy %g\n' % (test_accuracy))
 
             if i % 100 == 0:
                 train_average_accuracy /= 100
                 train_average_wmc /= 100
                 train_average_loss /= 100
-                with open("log.txt", 'a') as outFile:
-                    print('step %d, training_accuracy %g, train_loss %g, wmc %g, test accuracy %g' % (i, train_average_accuracy, train_average_loss, train_average_wmc,test_accuracy))
-                    outFile.write('step %d, training_accuracy %g, train_loss %g, wmc %g\n' % (i, train_average_accuracy, train_average_loss, train_average_wmc))
-                    train_average_accuracy, train_average_wmc, train_average_loss = 0.0, 0.0, 0.0
+                #with open("log.txt", 'a') as outFile:
+                #    print('step %d, training_accuracy %g, train_loss %g, wmc %g, test accuracy %g' % (i, train_average_accuracy, train_average_loss, train_average_wmc,test_accuracy))
+                #    outFile.write('step %d, training_accuracy %g, train_loss %g, wmc %g\n' % (i, train_average_accuracy, train_average_loss, train_average_wmc))
+                #    train_average_accuracy, train_average_wmc, train_average_loss = 0.0, 0.0, 0.0
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -208,5 +200,13 @@ if __name__ == '__main__':
     FLAGS, unparsed = parser.parse_known_args()
     #print(yatin)
     FLAGS_STR = '_'.join([k.replace('_','.') +'-'+str(v) for k,v in FLAGS.__dict__.items()])
-    
+    logger = logging.getLogger(FLAGS_STR)
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s,%(message)s',datefmt='%Y%m%d %H:%M:%S')
+    handler = logging.FileHandler('../logs/'+FLAGS_STR+'.csv')
+    logger.addHandler(handler)
+    logger.info('t,step,exp,tea,tra,trl,trw')
+    handler.setFormatter(formatter)
+
+
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
