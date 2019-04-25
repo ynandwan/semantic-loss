@@ -1,3 +1,4 @@
+#copied as is from  https://github.com/UCLA-StarAI/Semantic-Loss/tree/master/semi_supervised
 """Functions for downloading and reading MNIST data."""
 from __future__ import print_function
 import gzip
