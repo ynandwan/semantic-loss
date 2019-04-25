@@ -204,7 +204,8 @@ if __name__ == '__main__':
     FLAGS, unparsed = parser.parse_known_args()
     #print(yatin)
     keys = list(FLAGS.__dict__.keys())
-
+    keys.sort()
+    #Pdb().set_trace()
     FLAGS_STR = '_'.join([k.replace('_','.') +'-'+str(FLAGS.__dict__[k]) for k in keys])
     print('Start: {}'.format(FLAGS_STR))
     if os.path.exists('../logs/'+FLAGS_STR+'.csv'):
