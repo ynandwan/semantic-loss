@@ -175,6 +175,8 @@ def main(_):
                 #print('test accuracy %g' % (test_accuracy))
                 #    outFile.write('test accuracy %g\n' % (test_accuracy))
 
+            if i % 10000 == 0:
+                print('step %d, training_accuracy %g, train_loss %g, wmc %g, test accuracy %g' % (i, train_average_accuracy, train_average_loss, train_average_wmc,test_accuracy))
             if i % 100 == 0:
                 train_average_accuracy /= 100
                 train_average_wmc /= 100
@@ -201,7 +203,9 @@ if __name__ == '__main__':
     
     FLAGS, unparsed = parser.parse_known_args()
     #print(yatin)
-    FLAGS_STR = '_'.join([k.replace('_','.') +'-'+str(v) for k,v in FLAGS.__dict__.items()])
+    keys = list(FLAGS.__dict__.keys())
+
+    FLAGS_STR = '_'.join([k.replace('_','.') +'-'+str(FLAGS.__dict__[k]) for k in keys])
     print('Start: {}'.format(FLAGS_STR))
     if os.path.exists('../logs/'+FLAGS_STR+'.csv'):
         print('Alredy done. Exit')
