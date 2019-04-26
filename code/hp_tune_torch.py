@@ -21,7 +21,7 @@ num_labeled = [100]
 batch_size = [10]
 std = [0.1, 0.2, 0.3, 0.4, 0.5]
 wt = [0.1, 0.01, 0.005, 0.001, 0.0005, 0.0001]
-lr = [1e-4]
+lr = [1e-3, 1e-5]
 
 
 all_params = [num_labeled,  batch_size, std, wt, lr, gpu]
@@ -37,7 +37,7 @@ for i, setting in enumerate(all_jobs):
     jobs_list[log_str] = setting_str
 
 
-fh = open('torch_jobs.sh','w')
+fh = open('torch_jobs1.sh','w')
 mode = stat.S_IROTH | stat.S_IRWXU | stat.S_IXOTH | stat.S_IRGRP | stat.S_IXGRP
 
 print('Running %d jobs' % (len(jobs_list)))
@@ -58,5 +58,6 @@ for log_str, setting_str in jobs_list.items():
 print("for pid in ${pids[*]}; do",file = fh)
 print("\twait $pid",file = fh)
 print("done",file = fh)
-os.chmod('torch_jobs.sh',mode)
+os.chmod('torch_jobs1.sh',mode)
+
 
