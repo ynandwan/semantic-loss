@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-logs_dir',default='../logs',type=str)
+parser.add_argument('-logs_dir',default='../logs_colab',type=str)
 args = parser.parse_args(sys.argv[1:])
 
 def read_table(stats_file):
