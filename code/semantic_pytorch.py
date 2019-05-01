@@ -58,13 +58,15 @@ def train_transform(images):
         #all of this is just to crop and pad with 0
         to_pil = tv.transforms.ToPILImage()
         to_tensor = tv.transforms.ToTensor()
-        rc = tv.transforms.RandomCrop(24)
+        cs = 26
+        ps = (28 - cs)//2
+        rc = tv.transforms.RandomCrop(cs)
 
         images = torch.cat([to_tensor(rc(to_pil(ten.view(28,28)))) for ten in images])
         
-        images = F.pad(((images.view(-1,24*24) - mu.unsqueeze(-1))/sig.unsqueeze(-1)).view(-1,24,24),(2,2,2,2)).view(-1,784)
+        images = F.pad(((images.view(-1,cs*cs) - mu.unsqueeze(-1))/sig.unsqueeze(-1)).view(-1,cs,cs),(ps,ps,ps,ps)).view(-1,784)
         
-        images += 0.3*torch.randn(images.size())
+        images += FLAGS.std*torch.randn(images.size())
     return images  
 
 
@@ -90,8 +92,7 @@ def train(FLAGS, FLAGS_STR, logger):
     if FLAGS.gpu:
         dnn = dnn.cuda()
 
-
-    for batch_num in range(50000):
+    for batch_num in range(FLAGS.num_iter):
         images, labels = mnist.train.next_batch(FLAGS.batch_size)
         images = torch.FloatTensor(images)
         labels = torch.Tensor(labels) 
@@ -165,23 +166,37 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float,help='learning rate of adam', default = 0.0001)
     parser.add_argument('--gpu', type=int,help='use gpu or not', default = 0)
      
+    parser.add_argument('--output_dir', type=str,
+                                            default='../logs',
+                                            help='Directory for storing output logs')
     
+    parser.add_argument('--num_iter', type=int,
+                                            help='Num of iterations',default = 20000)
     FLAGS, unparsed = parser.parse_known_args()
     FLAGS.gpu = torch.cuda.is_available() and FLAGS.gpu
     #print(yatin)
     keys = list(FLAGS.__dict__.keys())
     keys.sort()
     keys.remove('gpu')
+    keys.remove('output_dir')
     #Pdb().set_trace()
     FLAGS_STR = '_'.join([k.replace('_','.') +'-'+str(FLAGS.__dict__[k]) for k in keys])
     print('Start: {}'.format(FLAGS_STR))
-    if os.path.exists('../logs_torch/'+FLAGS_STR+'.csv'):
+    FLAGS.output_dir = FLAGS.output_dir + '_'+ str(FLAGS.num_labeled)
+    output_file = os.path.join(FLAGS.output_dir, FLAGS_STR+'.csv')
+    if not os.path.exists(FLAGS.output_dir):
+        try:
+            os.mkdir(FLAGS.output_dir)
+        except:
+            pass
+        
+    if os.path.exists(output_file):
         print('Alredy done. Exit')
     else:
         logger = logging.getLogger(FLAGS_STR)
         logger.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s,%(message)s',datefmt='%Y%m%d %H:%M:%S')
-        handler = logging.FileHandler('../logs_torch/'+FLAGS_STR+'.csv')
+        handler = logging.FileHandler(output_file)
         logger.addHandler(handler)
         logger.info('t,step,exp,tea,tra,trl,trw')
         handler.setFormatter(formatter)

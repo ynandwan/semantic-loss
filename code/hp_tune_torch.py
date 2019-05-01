@@ -11,21 +11,24 @@ import stat
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-max_jobs',default=1,type=int)
+parser.add_argument('-output_dir',default='../logs_torch',type=str)
+parser.add_argument('-output_file',default='all_jobs_torch.sh',type=str)
 args = parser.parse_args(sys.argv[1:])
 
-slurm_cmd = 'python semantic_pytorch.py' 
+slurm_cmd = 'python semantic_pytorch.py --output_dir {}'.format(args.output_dir) 
 
 
-gpu = [1]
-num_labeled = [100]
-batch_size = [10]
-std = [0.1, 0.2, 0.3, 0.4, 0.5]
-wt = [0.1, 0.01, 0.005, 0.001, 0.0005, 0.0001]
-lr = [1e-3, 1e-5]
+gpu = [0]
+num_labeled = [1000]
+batch_size = [10,16]
+std = [0.2, 0.3, 0.4]
+#wt = [2,1,0.1, 0.01, 0.005]
+wt = [0]
+lr = [1e-4]
+num_iter = [25000]
 
-
-all_params = [num_labeled,  batch_size, std, wt, lr, gpu]
-names = ['num_labeled','batch_size','std','wt','lr', 'gpu']
+all_params = [num_labeled,  batch_size, std, wt, lr, gpu, num_iter]
+names = ['num_labeled','batch_size','std','wt','lr', 'gpu','num_iter']
 
 all_jobs = list(itertools.product(*all_params))
 jobs_list = {}
@@ -37,7 +40,7 @@ for i, setting in enumerate(all_jobs):
     jobs_list[log_str] = setting_str
 
 
-fh = open('torch_jobs1.sh','w')
+fh = open(args.output_file,'w')
 mode = stat.S_IROTH | stat.S_IRWXU | stat.S_IXOTH | stat.S_IRGRP | stat.S_IXGRP
 
 print('Running %d jobs' % (len(jobs_list)))
@@ -58,6 +61,7 @@ for log_str, setting_str in jobs_list.items():
 print("for pid in ${pids[*]}; do",file = fh)
 print("\twait $pid",file = fh)
 print("done",file = fh)
-os.chmod('torch_jobs1.sh',mode)
+fh.close()
+os.chmod(args.output_file,mode)
 
 

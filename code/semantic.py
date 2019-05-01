@@ -75,7 +75,7 @@ def deepnn(x_images):
 
     # Map the 1024 features to 10 classes, one for each digit
     with tf.name_scope('fc6'):
-        y_mlp = tf.contrib.layers.fully_connected(h_fc5, 10, activation_fn = None)
+        y_mlp = tf.contrib.layers.fully_connected(h_fc5_drop, 10, activation_fn = None)
 
     return y_mlp, keep_prob
 
@@ -160,7 +160,7 @@ def main(_):
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         train_average_accuracy, train_average_wmc, train_average_loss = 0.0, 0.0, 0.0
-        for i in range(50000):
+        for i in range(FLAGS.num_iter):
             images, labels = mnist.train.next_batch(FLAGS.batch_size)
             _, train_accuracy, train_wmc, train_loss =  sess.run([train_step, accuracy, wmc, loss], feed_dict={x: images, y_: labels, keep_prob: 0.5})
             train_average_accuracy += train_accuracy
@@ -198,23 +198,37 @@ if __name__ == '__main__':
     parser.add_argument('--wt', type=float,help='semantic loss weight', default = 0.0005)
     parser.add_argument('--std', type=float,help='std dev of gaussian noise', default = 0.3)
     parser.add_argument('--lr', type=float,help='learning rate of adam', default = 0.0001)
+    parser.add_argument('--output_dir', type=str,
+                                            default='../logs',
+                                            help='Directory for storing output logs')
      
 
+    parser.add_argument('--num_iter', type=int,
+                                            help='Num of iterations',default = 20000)
     
     FLAGS, unparsed = parser.parse_known_args()
     #print(yatin)
     keys = list(FLAGS.__dict__.keys())
     keys.sort()
+    keys.remove('output_dir')
     #Pdb().set_trace()
     FLAGS_STR = '_'.join([k.replace('_','.') +'-'+str(FLAGS.__dict__[k]) for k in keys])
     print('Start: {}'.format(FLAGS_STR))
-    if os.path.exists('../logs/'+FLAGS_STR+'.csv'):
+    FLAGS.output_dir = FLAGS.output_dir + '_'+ str(FLAGS.num_labeled)
+    output_file = os.path.join(FLAGS.output_dir, FLAGS_STR+'.csv')
+    if not os.path.exists(FLAGS.output_dir):
+        try:
+            os.mkdir(FLAGS.output_dir)
+        except:
+            pass
+        
+    if os.path.exists(output_file):
         print('Alredy done. Exit')
     else:
         logger = logging.getLogger(FLAGS_STR)
         logger.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s,%(message)s',datefmt='%Y%m%d %H:%M:%S')
-        handler = logging.FileHandler('../logs/'+FLAGS_STR+'.csv')
+        handler = logging.FileHandler(output_file)
         logger.addHandler(handler)
         logger.info('t,step,exp,tea,tra,trl,trw')
         handler.setFormatter(formatter)
