@@ -1,0 +1,27 @@
+The train-semi.bin contains both the 4000 labeled samples and the rest which are unlabeled. The labeled samples are repeated multiple times to balance the ratio between labeled and unlabeled samples.
+The train-no_unlabeled only contains the 4000 labeled samples.
+
+To make sure the number of labeled samples is not significantly smaller than when training with no unlabeled samples, we have to increase the batch size accordingly when training on train-semi.bin.
+
+The following commands shall be used on computing platforms with GPUs.
+
+To train on train-semi.bin (with batch size of 512):
+python main.py --mode train --train_data_path data/train-semi.bin --eval_data_path data/test.bin --train_dir log_semi/train --eval_dir log_semi/eval --log_root log_semi/ --batch-size 512
+To train on train-semi.bin (with batch size of 1024):
+python main.py --mode train --train_data_path data/train-semi.bin --eval_data_path data/test.bin --train_dir log_semi/train --eval_dir log_semi/eval --log_root log_semi/ --batch-size 1024
+
+To evaluate the model trained on train-semi.bin
+python main.py --mode eval --train_data_path data/train-semi.bin --eval_data_path data/test.bin --train_dir log_semi/train --eval_dir log_semi/eval --log_root log_semi/
+
+
+
+To train on train-no_unlabeled.bin:
+python main.py --mode train --train_data_path data/train-no_unlabeled.bin --eval_data_path data/test.bin --train_dir log_no_unlabeled/train --eval_dir log_no_unlabeled/eval --log_root log_no_unlabeled/
+to evaluate the model trained on train-no_unlabeled.bin:
+python main.py --mode eval --train_data_path data/train-no_unlabeled.bin --eval_data_path data/test.bin --train_dir log_no_unlabeled/train --eval_dir log_no_unlabeled/eval --log_root log_no_unlabeled/
+
+If the computing platform does not have a GPU, please add --num_gpus 0 to your command arguments. For example, if train on train-semi.bin with batch size of 512 and no GPU:
+python main.py --mode train --train_data_path data/train-semi.bin --eval_data_path data/test.bin --train_dir log_semi/train --eval_dir log_semi/eval --log_root log_semi/ --batch-size 512 --num_gpus 0
+
+
+Note, since currently the log (log_semi or log_no_unlabeled) repo has saved models, the training procedure will first load the models stored in that repo. To start training a completely new one, you can delete the checkpoints saved in the log repo.
